@@ -195,6 +195,10 @@ func RunVolumeHealer(ns *NodeServer, conf *util.Config) error {
 		if pv.Status.Phase != v1.VolumeBound || pv.DeletionTimestamp != nil {
 			continue
 		}
+		// skip if is intree rbd
+		if pv.Spec.PersistentVolumeSource.CSI == nil {
+			continue
+		}
 		// skip if mounter is not rbd-nbd
 		if pv.Spec.PersistentVolumeSource.CSI.VolumeAttributes["mounter"] != "rbd-nbd" {
 			continue

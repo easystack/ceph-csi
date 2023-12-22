@@ -574,7 +574,7 @@ func detachRBDImageOrDeviceSpec(
 		unmapArgs = appendKRbdDeviceTypeAndOptions(unmapArgs, dArgs.unmapOptions)
 	}
 
-	_, stderr, err := util.ExecCommand(ctx, rbd, unmapArgs...)
+	_, stderr, err := util.ExecCommandWithTimeout(ctx, rbdTimeout, rbd, unmapArgs...)
 	if err != nil {
 		// Messages for krbd and nbd differ, hence checking either of them for missing mapping
 		// This is not applicable when a device path is passed in

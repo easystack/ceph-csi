@@ -40,6 +40,8 @@ const (
 	accessTypeNbd  = "nbd"
 
 	rbd = "rbd"
+	// Rbd unmap/map operations timeout setting, unit: second
+	rbdTimeout = 60 * time.Second
 
 	// Output strings returned during invocation of "rbd unmap --device-type... <imageSpec>" when
 	// image is not found to be mapped. Used to ignore errors when attempting to unmap such images.
@@ -48,6 +50,10 @@ const (
 	rbdUnmapCmdkRbdMissingMap = "rbd: %s: not a mapped image or snapshot"
 	rbdUnmapCmdNbdMissingMap  = "rbd-nbd: %s is not mapped"
 	rbdMapConnectionTimeout   = "Connection timed out"
+
+	// The rbd map exec command with context,when context.DeadlineExceeded error was occurred.
+	// the error with "timeout" will be return and exec rbd unmap operation.
+	rbdMapHangTimeout = "timeout"
 
 	defaultNbdReAttachTimeout = 300 /* in seconds */
 	defaultNbdIOTimeout       = 0   /* do not abort the requests */
@@ -338,6 +344,7 @@ func attachRBDImage(ctx context.Context, volOptions *rbdVolume, device string, c
 			return "", err
 		}
 		devicePath, err = createPath(ctx, volOptions, device, cr)
+
 	}
 
 	return devicePath, err
@@ -462,12 +469,12 @@ func createPath(ctx context.Context, volOpt *rbdVolume, device string, cr *util.
 	if volOpt.NetNamespaceFilePath != "" {
 		stdout, stderr, err = util.ExecuteCommandWithNSEnter(ctx, volOpt.NetNamespaceFilePath, cli, mapArgs...)
 	} else {
-		stdout, stderr, err = util.ExecCommand(ctx, cli, mapArgs...)
+		stdout, stderr, err = util.ExecCommandWithTimeout(ctx, rbdTimeout, cli, mapArgs...)
 	}
 	if err != nil {
 		log.WarningLog(ctx, "rbd: map error %v, rbd output: %s", err, stderr)
-		// unmap rbd image if connection timeout
-		if strings.Contains(err.Error(), rbdMapConnectionTimeout) {
+		// unmap rbd image if connection timeout or hang timeout
+		if strings.Contains(err.Error(), rbdMapConnectionTimeout) || strings.Contains(err.Error(), rbdMapHangTimeout) {
 			dArgs := detachRBDImageArgs{
 				imageOrDeviceSpec: imagePath,
 				isImageSpec:       true,
@@ -568,7 +575,7 @@ func detachRBDImageOrDeviceSpec(
 		unmapArgs = appendKRbdDeviceTypeAndOptions(unmapArgs, dArgs.unmapOptions)
 	}
 
-	_, stderr, err := util.ExecCommand(ctx, rbd, unmapArgs...)
+	_, stderr, err := util.ExecCommandWithTimeout(ctx, rbdTimeout, rbd, unmapArgs...)
 	if err != nil {
 		// Messages for krbd and nbd differ, hence checking either of them for missing mapping
 		// This is not applicable when a device path is passed in

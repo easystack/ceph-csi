@@ -32,7 +32,15 @@ ifeq ($(HAVE_CPUSET),1)
     CPUSET ?= --cpuset-cpus=0-${CPUS}
 endif
 
-CSI_IMAGE_NAME=$(if $(ENV_CSI_IMAGE_NAME),$(ENV_CSI_IMAGE_NAME),hub.easystack.io/captain/cephcsi)
+
+ifeq ($(GOARCH),amd64)
+    CSI_IMAGE_NAME=hub.easystack.io/captain/cephcsi
+else ifeq ($(GOARCH),arm64)
+    CSI_IMAGE_NAME=hub.easystack.io/arm64v8/cephcsi
+else
+    $(error Unsupported GOARCH: $(GOARCH))
+endif
+
 CSI_IMAGE_VERSION=$(shell . $(CURDIR)/build.env ; echo $${CSI_IMAGE_VERSION})
 CSI_IMAGE=$(CSI_IMAGE_NAME):$(CSI_IMAGE_VERSION)
 

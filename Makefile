@@ -38,7 +38,7 @@ ifeq ($(GOARCH),amd64)
 else ifeq ($(GOARCH),arm64)
     CSI_IMAGE_NAME=hub.easystack.io/arm64v8/cephcsi
 else
-    $(error Unsupported GOARCH: $(GOARCH))
+    CSI_IMAGE_NAME=hub.easystack.io/arm64v8/cephcsi
 endif
 
 CSI_IMAGE_VERSION=$(shell . $(CURDIR)/build.env ; echo $${CSI_IMAGE_VERSION})

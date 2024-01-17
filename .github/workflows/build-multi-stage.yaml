@@ -25,3 +25,19 @@ jobs:
         # yamllint disable-line rule:line-length
         if: ${{ contains(github.event.pull_request.labels.*.name, 'ci/skip/multi-arch-build') }}
         run: make containerized-build
+      - name: Build binary
+        run: |
+          echo "creating images cache..."
+          docker save hub.easystack.io/captain/cephcsi:v3.9.0-es| pigz > ceph-csi-x86.tar.gz
+          docker save hub.easystack.io/arm64v8/cephcsi:v3.9.0-es| pigz > ceph-csi-arm.tar.gz
+      - name: cache x86 image
+        uses: actions/upload-artifact@v2
+        with:
+          name: ceph-csi-x86.tar.gz
+          path: ceph-csi-x86.tar.gz
+      - name: cache arm image
+        uses: actions/upload-artifact@v2
+        with:
+          name: ceph-csi-arm.tar.gz
+          path: ceph-csi-arm.tar.gz
+      
